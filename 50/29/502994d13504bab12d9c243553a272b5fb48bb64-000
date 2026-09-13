@@ -1,0 +1,182 @@
+# Contexte de reprise : shorts Houdini Louisiana Bayou
+
+Dossier de travail : `/Users/zenray/Downloads/tmp-shorts-vestibule-louisiana-bayou/`
+Scripts sauvegardés dans `scripts/` (`render_short.py`, `render_bg_noise.py`, `render_mikiri_flash.py`).
+
+Organisation active depuis le 2026-09-13 : les deux MOV finaux et les deux documents restent à la
+racine. Les exports MP4 vivent dans `mp4/`, les sources dans `raw/`, les musiques dans `audio/`, les
+calques dans `assets/`, les essais dans `tests/`, les analyses dans `design/` et les états dans
+`state/`. Le rangement est réversible par le journal Gear
+`20260913-100752-organize-louisiana-bayou-shorts.json`.
+
+## Atelier du futur style
+
+Une image témoin sans sous-titre est extraite à 15 secondes de `short-02-vestibule.mov` :
+`/Users/zenray/Create/Share/tmp-louisiana-bayou-short-style/LouisianaBayouShortStyleReference.jpg`.
+Elle est la seule image de l'atelier HDA heavy situé dans
+`/Users/zenray/Create/Share/tmp-louisiana-bayou-short-style/atelier/`. Le titre actuel est intégré à
+l'image et sert de référence visuelle. Après validation des réglages, leurs valeurs devront être
+reportées dans le générateur des futurs shorts.
+
+## Versions V4 conservées le 2026-09-12
+
+Les deux V4 existent maintenant côte à côte afin de permettre une comparaison sans perte :
+
+- `tests/mov/short-01-church-turntable-TEST-gradientbg4.mov` est l'ancien V4 restauré. Il reprend le
+  bruit anisotrope ridged, le fond sombre et le titre `Houdini Louisiana Bayou`.
+- `tests/mov/short-01-church-turntable-TEST-gradientbg4-rework.mov` est le nouveau rework. Il repart du
+  fBm isotrope du V3, augmente le défilement organique, mélange les zones hautes vers le blanc pour
+  créer des nuages, puis applique le flou Glass ZenRayProgress avec `gblur=sigma=27` et
+  `saturation=1.69`.
+
+Le script de génération du rework est `scripts/render_bg_noise_v4_rework.py`. Le script
+`scripts/render_bg_noise.py` et `tests/backgrounds/bg_noise_v4.mov` correspondent à l'ancien V4 restauré.
+Le titre du rework est `Houdini Procedural Church` : `Houdini` reste droit et `Procedural Church`
+reste en italique. Les deux shorts validés ne sont pas touchés.
+
+## Où on en est
+
+Deux shorts 30 s (1080x1920, 30 ips) sont **validés et livrés** :
+- `short-01-church-turntable.mov` (musique every-dawn-and-dusk)
+- `short-02-vestibule.mov` (musique stay-dont-go-away)
+
+Un **essai en cours**, sur COPIE du short-01 uniquement, jamais appliqué aux finaux validés :
+remplacer le fond noir derrière le flou vidéo par un fond animé. 4 itérations livrées :
+- `TEST-gradientbg.mov` : dégradé ffmpeg `gradients` (rotatif, rejeté : "le rotate c'est affreux")
+- `TEST-gradientbg2.mov` : mêmes couleurs custom (rejeté, toujours rotatif)
+- `TEST-gradientbg3.mov` : fond bruit fBm scrollé verticalement, turquoise haut/bleu bas, + drop
+  shadow ajoutée sur sous-titres jaunes et pastille titre (rejeté : "manque le blur ZenRayProgress,
+  trop bleu/turquoise, flux pas assez visible")
+- `TEST-gradientbg4.mov` : **dernier envoyé, en attente de retour**. Bruit "ridged" anisotrope
+  (veines/gouttes qui coulent), palette assombrie/désaturée dès la génération, + flou fort
+  (`gblur=sigma=14`) et assombrissement (`eq=brightness=-0.16:saturation=0.82`) façon verre dépoli
+  ZenRayProgress, par-dessus le blend screen.
+
+**Prochaine étape : régler une seule image dans l'atelier HDA du futur style**, puis reporter les
+valeurs validées dans le générateur avant de recalculer une vidéo. Les deux finaux restent intacts
+pendant cette recherche.
+
+## Les 3 scripts, ce qu'ils font, comment les relancer
+
+### 1. `scripts/render_short.py` : titre et 10 sous-titres animés
+Génère 900 frames RGBA (1080x1920) en flux vers stdout, pipées dans ffmpeg comme second input.
+
+Titre : deux polices sur une ligne partageant la même baseline (`font.getmetrics()`, jamais
+`getbbox()` top) : `Houdini` droit `AnthropicSerif-SemiBold.ttf`, `Procedural Church` italique
+`AnthropicSerif-SemiBoldItalic.ttf`, casse normale partout, pastille blanche auto-dimensionnée au
+pixel max sans dépasser 92% de la largeur. La copie legacy `scripts/render_short_v4_legacy.py`
+conserve l'ancien titre `Houdini Louisiana Bayou` pour reconstruire l'ancien V4.
+
+Sous-titres : `InterVariable.ttf` poids **900 (Black)** via `set_variation_by_name` (jamais
+`set_variation_by_axes`, qui règle le mauvais axe sur cette police à 2 axes), couleur `#FFE600`
+jaune vif, 10 cues de 3s avec animation pop-in (scale+opacity keyframes).
+
+**Ajout du 2026-09-12 (cette session) : drop shadow subtile** sur les sous-titres jaunes et la
+pastille du titre, baked directement dans les sprites/la pastille (params `subtitle_shadow_*` et
+`title_shadow_*` en tête du dict `P`).
+
+Usage : `python3 scripts/render_short.py | ffmpeg -f rawvideo -pix_fmt rgba -s 1080x1920 -r 30 -i pipe:0 ...`
+
+### 2. `scripts/render_bg_noise_v4_rework.py` : fond animé du nouveau V4
+Repart du V3 : bruit fBm **isotrope**, doux et multi-échelle, scrollé verticalement dans le temps
+(`scroll_speed_px_s`) pour garder un flux organique. L'amplitude passe à `0.26`, la vitesse à
+`30.0 px/s`, puis les valeurs hautes du bruit sont mélangées vers le blanc avec
+`cloud_floor=0.30`, `cloud_ceiling=0.86` et `cloud_strength=0.28`. La luminosité de base vaut
+`1.03`. Le dégradé reste turquoise en haut et bleu en bas.
+
+La composition applique ensuite la recette Glass de ZenRayProgress : `gblur=sigma=27:steps=2`,
+`eq=brightness=0.08:saturation=1.69`. Le rendu final de comparaison est
+`tests/mov/short-01-church-turntable-TEST-gradientbg4-rework.mov`.
+
+Commande du fond intermédiaire :
+```bash
+python3 scripts/render_bg_noise_v4_rework.py | ffmpeg -y -f rawvideo -pix_fmt rgba -s 1080x1920 -r 30 -i pipe:0 \
+  -c:v libx264 -preset fast -crf 12 -pix_fmt yuv420p tests/backgrounds/bg_noise_v4_rework.mov
+```
+
+### 3. `scripts/render_bg_noise.py` : fond animé de l'ancien V4 restauré
+Conserve le bruit fBm **anisotrope ridged**, la palette assombrie et les paramètres historiques de
+l'ancien V4. Le fond intermédiaire correspondant est `tests/backgrounds/bg_noise_v4.mov`. La copie du rendu
+est `tests/mov/short-01-church-turntable-TEST-gradientbg4.mov`.
+
+Rendu en fichier intermédiaire d'abord, car un processus ffmpeg ne lit qu'un seul stdin :
+```bash
+python3 scripts/render_bg_noise.py | ffmpeg -y -f rawvideo -pix_fmt rgba -s 1080x1920 -r 30 -i pipe:0 \
+  -c:v libx264 -preset fast -crf 12 -pix_fmt yuv420p tests/backgrounds/bg_noise_v4.mov
+```
+
+### 4. `scripts/render_mikiri_flash.py` : le flash "NEW" (déjà finalisé, ne pas retoucher sans raison)
+0.30s, 1080x1920, 60fps, ProRes 4444 alpha. Style Sekiro mikiri : rose saturé `rgb(255,18,132)` →
+rose pâle `#eb8c86`, aucun contour noir, vapeur texturée nuage (bruit fBm) 2.15x plus grande que le
+texte net, fade in ET fade out. Fichier déjà rendu : `assets/overlays/impact-new-flash-030s.mov`.
+
+## La commande complète de composition (le pipeline entier)
+
+```bash
+D=/Users/zenray/Downloads/tmp-shorts-vestibule-louisiana-bayou
+S=chemin/vers/scripts   # ou "$D/scripts"
+B="$D/tests/backgrounds"
+O="$D/tests/mov"
+
+# 1. fond animé en fichier intermédiaire (voir ci-dessus) -> bg_noise_v4.mov
+
+# 2. composition principale : vidéo source + titre/sous-titres + fond + audio
+python3 $S/render_short.py | ffmpeg -y -v error \
+  -i "$D/raw/screen/turntable-ecran-30s.mov" \
+  -f rawvideo -pix_fmt rgba -s 1080x1920 -r 30 -i pipe:0 \
+  -i "$D/audio/cuts/every-dawn-and-dusk-30s.mp3" \
+  -i "$B/bg_noise_v4.mov" \
+  -filter_complex "
+    [0:v]fps=30,split=2[bgsrc][fgsrc];
+    [bgsrc]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=40:5,eq=brightness=-0.15,format=gbrp[bgblur];
+    [3:v]format=gbrp[grad];
+    [grad][bgblur]blend=all_mode=screen,format=yuv420p[bgscreen];
+    [bgscreen]gblur=sigma=14:steps=2,eq=brightness=-0.16:saturation=0.82[bggrad];
+    [fgsrc]scale=1080:-2[fg];
+    [bggrad][fg]overlay=(W-w)/2:(H-h)/2[base];
+    [base][1:v]overlay=0:0:format=auto[vout]
+  " \
+  -map "[vout]" -map 2:a \
+  -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -movflags +faststart \
+  -c:a aac -b:a 320k -t 30 \
+  "$O/TEST-base.mov"
+
+# 3. merge du flash NEW au tout début, plein cadre, sans crop
+ffmpeg -y -v error -i "$D/assets/overlays/impact-new-flash-030s.mov" -i "$O/TEST-base.mov" \
+  -filter_complex "[1:v][0:v]overlay=0:0:eof_action=pass:format=auto[vout]" \
+  -map "[vout]" -map 1:a \
+  -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -movflags +faststart \
+  -c:a copy \
+  "$O/OUTPUT-FINAL.mov"
+```
+
+Pour le short-02 (vestibule), remplacer `raw/screen/turntable-ecran-30s.mov` par
+`raw/screen/vestibule-ecran-30s.mov` et l'audio par `audio/cuts/stay-dont-go-away-30s.mp3`, puis
+régénérer le titre et les sous-titres avec les cues et le nom
+de composant correspondants dans `render_short.py` (actuellement câblé sur le short-01, les CUES et
+le titre doivent être adaptés pour le short-02 si on relance depuis zéro — le short-02 déjà validé a
+ses propres paramètres, non repris dans ce script tel quel).
+
+## Pièges déjà payés cette session, à ne pas rejouer
+
+- `ffmpeg gradients` lavfi = rotation mécanique autour d'un centre → rejeté par Matthieu, remplacé
+  par du bruit fBm streamé en fichier.
+- Blend `screen` entre une source RGB pure (`gradients`, ou notre bruit) et un flux vidéo décodé en
+  YUV sans conversion explicite de format produit des couleurs FAUSSES (virage magenta). Fix :
+  `format=gbrp` sur les deux branches avant `blend`, `format=yuv420p` après.
+- `InterVariable.ttf` a 2 axes (optical size, weight) : `set_variation_by_axes([900])` règle le
+  MAUVAIS axe en silence. Utiliser `set_variation_by_name(b'Black')`.
+- Un bruit fBm isotrope avec blur symétrique donne une texture "peau de lézard", pas des
+  veines/gouttes : il faut des cellules basse résolution **anisotropes** (beaucoup plus hautes que
+  larges) + une transformation "ridged" (`1 - |2x-1|`) pour lire comme des filaments verticaux.
+- Le skill `~/.claude/skills/zenray-houdini/SKILL.md` documente le style historique (titre mixte,
+  couleurs, flash), section "6 quater" et suivantes. Le nouveau style reste à valider dans l'atelier
+  d'image créé le 2026-09-13.
+
+## Fichiers source, ne pas toucher
+
+- `raw/screen/turntable-ecran-30s.mov`, `raw/screen/vestibule-ecran-30s.mov` : captures écran OBS
+  brutes, 3456x2234, 30s.
+- `audio/cuts/every-dawn-and-dusk-30s.mp3`, `audio/cuts/stay-dont-go-away-30s.mp3` : pistes 30s avec
+  fade 1s.
+- `assets/overlays/impact-new-flash-030s.mov` : flash NEW final, ne pas régénérer sans raison.
